@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <title>SWF Player</title>
+  <script>
+    window.RufflePlayer = window.RufflePlayer || {};
+    window.RufflePlayer.config = {
+      autoplay: "on",
+      unmuteOverlay: "visible",
+      letterbox: "on",
+      warnOnUnsupportedContent: true
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #101713;
+      --panel: #19221c;
+      --edge: #36443a;
+      --paper: #f0f0df;
+      --muted: #9ba99d;
+      --lime: #cdf36b;
+      --coral: #ff775e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 280px;
+      min-height: 100vh;
+      margin: 0;
+      padding: clamp(12px, 3vw, 36px);
+      color: var(--paper);
+      background-color: var(--ink);
+      background-image: radial-gradient(#344039 0.7px, transparent 0.7px);
+      background-size: 15px 15px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    }
+
+    .shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 2px 16px;
+      border-bottom: 1px solid var(--edge);
+    }
+
+    .eyebrow, .status, .file-name, .brand-mark {
+      font-family: "Courier New", monospace;
+      text-transform: uppercase;
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--lime);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(28px, 5vw, 46px);
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .brand-mark {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      min-height: 62px;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+    }
+
+    button {
+      min-height: 40px;
+      padding: 0 15px;
+      border: 1px solid var(--edge);
+      border-radius: 3px;
+      color: var(--paper);
+      background: var(--panel);
+      font: 600 13px "Trebuchet MS", "Segoe UI", sans-serif;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) { border-color: var(--lime); }
+    button:focus-visible, input:focus-visible + label {
+      outline: 2px solid var(--lime);
+      outline-offset: 3px;
+    }
+
+    button:disabled { opacity: 0.42; cursor: not-allowed; }
+
+    .open-button {
+      border-color: var(--lime);
+      color: var(--ink);
+      background: var(--lime);
+    }
+
+    .open-button:hover:not(:disabled) { background: #dafa91; }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      clip-path: inset(50%);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+
+    .status::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      content: "";
+    }
+
+    .status[data-state="ready"]::before { background: var(--lime); }
+    .status[data-state="error"] { color: var(--coral); }
+    .status[data-state="error"]::before { background: var(--coral); }
+
+    .stage {
+      position: relative;
+      display: grid;
+      min-height: min(62vh, 590px);
+      aspect-ratio: 16 / 9;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--edge);
+      background: #070a08;
+      transition: border-color 140ms ease;
+    }
+
+    .stage.is-empty::before,
+    .stage.is-empty::after {
+      position: absolute;
+      background: #1b261e;
+      content: "";
+      pointer-events: none;
+    }
+
+    .stage.is-empty::before { width: 1px; height: 48px; }
+    .stage.is-empty::after { width: 48px; height: 1px; }
+    .stage.is-dragging { border-color: var(--lime); }
+
+    .stage ruffle-player {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .stage-message {
+      position: absolute;
+      z-index: 1;
+      bottom: 14px;
+      left: 16px;
+      max-width: calc(100% - 32px);
+      margin: 0;
+      color: var(--coral);
+      font: 12px "Courier New", monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .bottom-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 2px 0;
+      color: var(--muted);
+      font: 10px "Courier New", monospace;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 16px 12px; }
+      header { align-items: start; }
+      .brand-mark { padding-top: 5px; font-size: 9px; }
+      .toolbar { flex-wrap: wrap; }
+      .file-name { order: 2; flex-basis: calc(100% - 110px); }
+      .status { order: 3; margin-left: auto; }
+      .stage { min-height: 50vh; aspect-ratio: auto; }
+      .bottom-line { font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">Legacy media / 01</p>
+        <h1>SWF Player</h1>
+      </div>
+      <span class="brand-mark">Ruffle runtime</span>
+    </header>
+
+    <section class="toolbar" aria-label="Player controls">
+      <input class="file-input" id="file-input" type="file" accept=".swf,application/x-shockwave-flash">
+      <label class="open-button" for="file-input" role="button" tabindex="0">Open SWF</label>
+      <span class="file-name" id="file-name">No file selected</span>
+      <button id="unload-button" type="button" disabled>Unload</button>
+      <button id="fullscreen-button" type="button">Fullscreen</button>
+      <span class="status" id="status" data-state="idle" role="status" aria-live="polite">Ready</span>
+    </section>
+
+    <section class="stage is-empty" id="stage" aria-label="Flash content player">
+      <p class="stage-message" id="message" hidden></p>
+    </section>
+
+    <footer class="bottom-line">
+      <span>SWF / Flash content</span>
+      <span>Runs in your browser</span>
+    </footer>
+  </main>
+
+  <script>
+    const stage = document.querySelector("#stage");
+    const input = document.querySelector("#file-input");
+    const fileName = document.querySelector("#file-name");
+    const status = document.querySelector("#status");
+    const message = document.querySelector("#message");
+    const unloadButton = document.querySelector("#unload-button");
+    let player;
+
+    function setStatus(label, state) {
+      status.textContent = label;
+      status.dataset.state = state;
+    }
+
+    function unload() {
+      if (player) player.remove();
+      player = undefined;
+      stage.classList.add("is-empty");
+      message.hidden = true;
+      message.textContent = "";
+      fileName.textContent = "No file selected";
+      unloadButton.disabled = true;
+      setStatus("Ready", "idle");
+    }
+
+    async function openFile(file) {
+      if (!file || !file.name.toLowerCase().endsWith(".swf")) {
+        setStatus("Choose a .swf file", "error");
+        return;
+      }
+
+      if (!window.RufflePlayer?.newest) {
+        setStatus("Runtime unavailable", "error");
+        message.textContent = "Ruffle could not be loaded. Check the network connection and reload.";
+        message.hidden = false;
+        return;
+      }
+
+      unload();
+      fileName.textContent = file.name;
+      unloadButton.disabled = false;
+      setStatus("Loading", "idle");
+
+      try {
+        player = window.RufflePlayer.newest().createPlayer();
+        player.style.width = "100%";
+        player.style.height = "100%";
+        stage.appendChild(player);
+        stage.classList.remove("is-empty");
+        await player.load({
+          data: new Uint8Array(await file.arrayBuffer()),
+          mimeType: "application/x-shockwave-flash"
+        });
+        setStatus("Playing", "ready");
+      } catch (error) {
+        setStatus("Could not load", "error");
+        message.textContent = error instanceof Error ? error.message : "This file could not be loaded.";
+        message.hidden = false;
+      }
+    }
+
+    input.addEventListener("change", () => openFile(input.files[0]));
+    document.querySelector(".open-button").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        input.click();
+      }
+    });
+    unloadButton.addEventListener("click", unload);
+    document.querySelector("#fullscreen-button").addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else stage.requestFullscreen?.();
+    });
+
+    stage.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      stage.classList.add("is-dragging");
+    });
+    stage.addEventListener("dragleave", () => stage.classList.remove("is-dragging"));
+    stage.addEventListener("drop", (event) => {
+      event.preventDefault();
+      stage.classList.remove("is-dragging");
+      openFile(event.dataTransfer.files[0]);
+    });
+  </script>
+</body>
+</html>
